@@ -6,6 +6,7 @@ import kotlin.system.exitProcess
 
 val start = System.currentTimeMillis()
 
+// Game of words
 class Words(private val wordsFile: File, candidatesFile: File) {
     init {
         if (!wordsFile.exists()) println("Error: The words file ${wordsFile.name} doesn't exist.")
@@ -15,7 +16,7 @@ class Words(private val wordsFile: File, candidatesFile: File) {
     }
 
     private var counter = 0
-    private val invalidLetters = mutableSetOf<Char>()
+    private val invalidLetters = mutableSetOf<String>()
     private val words = mutableListOf<String>()
     private val wordsList = checkWordsInFile(wordsFile)
     private val candidateList = checkWordsInFile(candidatesFile)
@@ -27,6 +28,7 @@ class Words(private val wordsFile: File, candidatesFile: File) {
         if (word.toCharArray().distinct().size != word.toCharArray().size) counter++
     }
 
+    // Checking words that player inputs
     fun checkInputWord(word: String) {
         counter++
 
@@ -36,42 +38,48 @@ class Words(private val wordsFile: File, candidatesFile: File) {
             !word.matches("""[a-z]+""".toRegex()) -> println("One or more letters of the input aren't valid.")
             word.toCharArray().distinct().size != word.toCharArray().size -> println("The input has duplicate letters.")
             !wordsList.contains(word) -> println("The input word isn't included in my words list.")
-
-            word == secretWord -> {
-                val end = System.currentTimeMillis()
-                println(words.joinToString("\n"))
-                println(word.uppercase())
-                println("Correct!")
-                if (counter == 1) {
-                    println("Amazing luck! The solution was found at once.")
-                } else {
-                    println("The solution was found after $counter tries in ${(end - start)/1000} seconds.")
-                }
-                exitProcess(0)
-            }
-
-            else -> {
-                var txt = ""
-                word.forEach {
-                    if (secretWord.contains(it)) {
-                        if (word.indexOf(it) == secretWord.indexOf(it)) {
-                            txt += it.uppercase()
-                        } else {
-                            txt += it
-                        }
-                    } else {
-                        invalidLetters.add(it)
-                        txt += "_"
-                    }
-                }
-                words.add(txt)
-                println(words.joinToString("\n"))
-                println()
-                println(invalidLetters.sorted().joinToString("").uppercase())
-            }
+            else -> checkResult(word)
         }
     }
 
+    // Checking and printing results in coloured background
+    private fun checkResult(word: String) {
+        if (word == secretWord) {
+            val end = System.currentTimeMillis()
+            println(words.joinToString("\n"))
+            word.forEach { print("\u001B[48:5:10m${it.uppercase()}\u001B[0m") }
+            println()
+            println("Correct!")
+            if (counter == 1) {
+                println("Amazing luck! The solution was found at once.")
+            } else {
+                println("The solution was found after $counter tries in ${(end - start)/1000} seconds.")
+            }
+            exitProcess(0)
+        }
+
+        else {
+            var txt = ""
+            word.forEach {
+                txt += if (secretWord.contains(it)) {
+                    if (word.indexOf(it) == secretWord.indexOf(it)) {
+                        "\u001B[48:5:10m${it.uppercase()}\u001B[0m"
+                    } else {
+                        "\u001B[48:5:11m${it.uppercase()}\u001B[0m"
+                    }
+                } else {
+                    invalidLetters.add(it.uppercase())
+                    "\u001B[48:5:7m${it.uppercase()}\u001B[0m"
+                }
+            }
+            words.add(txt)
+            println(words.joinToString("\n"))
+            println()
+            println("\u001B[48:5:14m${invalidLetters.sorted().joinToString("")}\u001B[0m")
+        }
+    }
+
+    // Checking if file contains correct words
     private fun checkWordsInFile(file: File): List<String> {
         val listOfWords = file.readLines().map { it.lowercase() }
         listOfWords.forEach {
@@ -84,6 +92,7 @@ class Words(private val wordsFile: File, candidatesFile: File) {
         }
     }
 
+    // Checking if all words in candidates file are in words file
     fun checkIfCandidatesAreInWordsFile() {
         if (wordsList.containsAll(candidateList)) {
             println("Words Virtuoso")
